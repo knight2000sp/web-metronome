@@ -1,4 +1,4 @@
-const APP_VERSION = 'v0.7.1'; // ★ リリースの際、ここの番号を手動で変更します
+const APP_VERSION = 'v0.7.2'; // ★ リリースの際、ここの番号を手動で変更します
 
 
 // === 1. DOM要素の取得 ===
@@ -497,3 +497,4 @@ if (SpeechRecognition) {
     voiceBtn.disabled = true;
     if (voiceFeedback) voiceFeedback.textContent = 'このブラウザは音声操作非対応です';
 }
+
