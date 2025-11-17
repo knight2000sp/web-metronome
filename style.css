@@ -1,0 +1,143 @@
+body {
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f4f4f4;
+}
+
+.metronome {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 300px;
+}
+
+h1 {
+    margin-top: 0;
+    font-size: 1.8em;
+}
+
+/* --- バージョン表示 --- */
+#app-version {
+    display: block; /* 独立した行にする */
+    margin-top: -10px; /* タイトルとの隙間を詰める */
+    margin-bottom: 15px; /* BPM表示との隙間を確保 */
+    font-size: 0.9em;
+    color: #888; /* 目立ちすぎない色に */
+}
+
+.bpm-display {
+    font-size: 2em;
+    font-weight: bold;
+    margin: 20px 0;
+    color: #333;
+}
+
+#bpm-value {
+    color: #007bff;
+}
+
+.bpm-slider input {
+    width: 100%;
+    cursor: pointer;
+}
+
+#start-stop-btn {
+    font-size: 1.2em;
+    padding: 10px 30px;
+    margin-top: 25px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+#start-stop-btn:hover {
+    background-color: #0056b3;
+}
+
+#start-stop-btn.running {
+    background-color: #dc3545;
+}
+
+#start-stop-btn.running:hover {
+    background-color: #a71d2a;
+}
+
+/* --- 音声コントロールボタン --- */
+#voice-btn {
+    font-size: 1.2em;
+    padding: 10px 20px; /* start-stopより少し小さく */
+    margin-top: 25px;
+    margin-left: 10px;
+    cursor: pointer;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+#voice-btn:hover {
+    background-color: #5a6268;
+}
+
+#voice-btn.running {
+    background-color: #17a2b8; /* 実行中は青緑色 */
+}
+
+/* --- 音声フィードバック欄 --- */
+#voice-feedback {
+    min-height: 1.5em; /* 高さを確保 */
+    margin-top: 15px;
+    margin-bottom: 0;
+    font-size: 1.1em;
+    color: #333;
+    font-weight: bold;
+}
+
+/* --- モード切替 (ラジオボタン) --- */
+.mode-selector {
+    margin-top: 25px;
+    margin-bottom: 15px;
+    
+    /* 縦並び・中央寄せ */
+    display: inline-flex;   /* 親要素(text-align:center)により中央寄せされる */
+    flex-direction: column; /* 常に縦並びにする */
+    align-items: flex-start;  /* ラジオボタンの先頭を左揃えにする */
+
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+
+.mode-selector label {
+    cursor: pointer;
+    font-size: 1.2em;      /* 常に大きくする */
+    margin-bottom: 15px;   /* 常に余白を設ける */
+}
+
+/* 最後のボタンの余白だけ削除 */
+.mode-selector label:last-child {
+    margin-bottom: 0;
+}
+
+/* --- N拍子/M分割 コントロール --- */
+.control-group {
+    margin-top: 15px;
+    font-size: 1.1em;
+}
+.control-group label {
+    font-weight: bold;
+}
+.control-group select {
+    font-size: 1em;
+    padding: 5px;
+    margin-left: 10px;
+    width: 60px;
+}

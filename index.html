@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webメトロノーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="metronome">
+        <h1>Webメトロノーム</h1>
+        
+        <span id="app-version"></span>
+        
+        <div class="bpm-display">
+            <span id="bpm-value">120</span> BPM
+        </div>
+        
+        <div class="bpm-slider">
+            <input type="range" id="bpm-slider" min="40" max="240" value="120">
+        </div>
+        
+        <button id="start-stop-btn">スタート</button>
+        <button id="voice-btn">音声コントロール 🎙️</button>
+
+        <p id="voice-feedback"></p>
+
+        <div class="mode-selector">
+            <label>
+                <input type="radio" name="mode" value="none" id="mode-none" checked> アクセントなし
+            </label>
+            <label>
+                <input type="radio" name="mode" value="beat" id="mode-beat"> N拍子
+            </label>
+            <label>
+                <input type="radio" name="mode" value="division" id="mode-division"> M分割
+            </label>
+        </div>
+
+        <div id="beat-controls" class="control-group" style="display: none;">
+            <label for="beats-select">拍子 (N):</label>
+            <select id="beats-select">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4" selected>4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+            </select>
+        </div>
+        
+        <div id="division-controls" class="control-group" style="display: none;">
+            <label for="divisions-select">分割 (M):</label>
+            <select id="divisions-select">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+            </select>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
