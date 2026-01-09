@@ -1,4 +1,4 @@
-const APP_VERSION = 'v0.7.2'; // ★ リリースの際、ここの番号を手動で変更します
+const APP_VERSION = 'v1.1.0'; // ★今回の変更に合わせてバージョンを上げました
 
 
 // === 1. DOM要素の取得 ===
@@ -6,7 +6,7 @@ const bpmSlider = document.getElementById('bpm-slider');
 const bpmValueSpan = document.getElementById('bpm-value');
 const startStopBtn = document.getElementById('start-stop-btn');
 const voiceBtn = document.getElementById('voice-btn');
-const voiceFeedback = document.getElementById('voice-feedback'); // フィードバック欄
+const voiceFeedback = document.getElementById('voice-feedback'); 
 
 const modeNone = document.getElementById('mode-none'); 
 const modeBeat = document.getElementById('mode-beat');
@@ -16,7 +16,7 @@ const divisionControls = document.getElementById('division-controls');
 const beatsSelect = document.getElementById('beats-select');
 const divisionsSelect = document.getElementById('divisions-select');
 
-// (バージョン番号をHTMLに書き込む)
+// バージョン表示
 const versionSpan = document.getElementById('app-version');
 if (versionSpan) {
     versionSpan.textContent = APP_VERSION;
@@ -36,7 +36,7 @@ let nextNoteTime = 0.0;
 const lookahead = 25.0; 
 const scheduleAheadTime = 0.1; 
 
-let currentMode = 'none'; // 初期値
+let currentMode = 'none'; 
 let beatsPerMeasure = 4; 
 let divisionsPerBeat = 1; 
 let beatCounter = 0; 
@@ -98,20 +98,20 @@ function playTickB(time) {
 // === 5. メトロノームの心臓部 (スケジューラ) ===
 function scheduleNote(time) {
     if (currentMode === 'none') {
-        playTickA(time); // 常に音A
+        playTickA(time); 
         beatCounter = 0;
     } else if (currentMode === 'beat') {
         if (beatCounter === 0) {
-            playTickB(time); // 1拍目
+            playTickB(time); 
         } else {
-            playTickA(time); // それ以外
+            playTickA(time); 
         }
         beatCounter = (beatCounter + 1) % beatsPerMeasure;
     } else { // 'division'
         if (beatCounter === 0) {
-            playTickB(time); // 拍の先頭
+            playTickB(time); 
         } else {
-            playTickA(time); // それ以外
+            playTickA(time); 
         }
         beatCounter = (beatCounter + 1) % divisionsPerBeat;
     }
@@ -138,7 +138,7 @@ function scheduler() {
 }
 
 
-// === 6. コントロール関数 (スタート/ストップ, BPM更新) ===
+// === 6. コントロール関数 ===
 async function startStop() {
     if (!isRunning) {
         const ready = await setupAudio();
@@ -196,24 +196,22 @@ divisionsSelect.addEventListener('change', (e) => {
     divisionsPerBeat = parseInt(e.target.value, 10);
     beatCounter = 0; 
 });
-
 beatsPerMeasure = parseInt(beatsSelect.value, 10);
 divisionsPerBeat = parseInt(divisionsSelect.value, 10);
 
 
-// === 8. 音声認識 ===
+// === 8. 音声認識 (ステートレス化・正規表現パターンマッチ) ===
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let isVoiceControlActive = false;
-let voiceState = 'bpm'; 
-let voiceStateTimer = null; 
+// ※ voiceState (状態管理変数) は廃止しました
 
 // (かな/漢数字をアラビア数字に変換する関数)
 function normalizeNumber(command) {
     let normalized = command;
     normalized = normalized.replace(/いち|一/g, '1');
-    normalized = normalized.replace(/に|荷|二|にい|二位/g, '2');
+    normalized = normalized.replace(/に|荷|二/g, '2');
     normalized = normalized.replace(/さん|三/g, '3');
     normalized = normalized.replace(/よん|四/g, '4');
     normalized = normalized.replace(/ご|五/g, '5');
@@ -227,89 +225,65 @@ function normalizeNumber(command) {
 }
 
 /**
- * 音声入力の状態を初期（BPM）に戻す
+ * 音声コマンドのメイン処理
+ * 状態を持たず、発話内容のパターンで処理を分岐します
  */
-function resetVoiceState() {
-    console.log("-> 音声入力: BPM (初期状態)");
-    voiceState = 'bpm';
-    if (voiceStateTimer) {
-        clearTimeout(voiceStateTimer);
-        voiceStateTimer = null;
-    }
-    if (isVoiceControlActive && voiceFeedback) {
-        voiceFeedback.textContent = 'BPMの数値をどうぞ';
-    }
-}
-
-/**
- * 3秒後に初期状態に戻るタイマーを起動する
- */
-function startVoiceStateTimer() {
-    if (voiceStateTimer) {
-        clearTimeout(voiceStateTimer);
-    }
-    voiceStateTimer = setTimeout(() => {
-        console.log("3秒経過。初期状態に戻ります。");
-        if (voiceFeedback) voiceFeedback.textContent = '時間切れです。BPMの数値をどうぞ';
-        resetVoiceState();
-    }, 3000); // 3秒
-}
-
-/**
- * 状態: BPM（初期状態）の処理
- */
-function handleBpmState(command) {
+function handleVoiceCommand(command) {
     
-    // (キーワードコマンドを先に処理)
-    if (command.includes('アクセントなし') || command.includes('なし')) {
+    // ---------------------------------------------
+    // 1. 制御コマンド (最優先)
+    // ---------------------------------------------
+    
+    // 音声停止
+    if ((command.includes('音声停止') || command.includes('コントロール停止') || command.includes('マイクオフ')) && isVoiceControlActive) {
+        console.log("-> 音声コントロールを停止します");
+        recognition.stop();
+        isVoiceControlActive = false;
+        voiceBtn.textContent = '音声コントロール 🎙️';
+        voiceBtn.classList.remove('running');
+        if (voiceFeedback) voiceFeedback.textContent = '音声コントロールを停止しました';
+        setTimeout(() => { if (voiceFeedback && !isVoiceControlActive) voiceFeedback.textContent = ''; }, 2000);
+        return;
+    }
+
+    // スタート
+    if (command.includes('スタート') && !isRunning) {
+        startStop();
+        if (voiceFeedback) voiceFeedback.textContent = 'メトロノームを開始';
+        return;
+    }
+    // ストップ
+    if ((command.includes('ストップ') || command.includes('とめて')) && isRunning) {
+        startStop();
+        if (voiceFeedback) voiceFeedback.textContent = 'メトロノームを停止';
+        return;
+    }
+
+
+    // ---------------------------------------------
+    // 2. 正規化 (数値を扱いやすくする)
+    // ---------------------------------------------
+    const normalizedCommand = normalizeNumber(command);
+
+
+    // ---------------------------------------------
+    // 3. 設定コマンド (パターンマッチング)
+    // ---------------------------------------------
+
+    // パターンA: アクセントなし
+    if (normalizedCommand.includes('アクセントなし') || normalizedCommand.includes('なし')) {
         console.log("-> モード: アクセントなし");
         modeNone.checked = true;
         modeNone.dispatchEvent(new Event('change'));
         if (voiceFeedback) voiceFeedback.textContent = 'アクセントなしモード';
         return;
     }
-    if (command.includes('ひょうし') || command.includes('拍子') || command.includes('表紙')) {
-        console.log("-> 音声入力: 拍子 (N) を待機中...");
-        voiceState = 'awaiting_beat';
-        if (voiceFeedback) voiceFeedback.textContent = '拍子(N)の数値をどうぞ (3秒以内)';
-        startVoiceStateTimer(); 
-        return;
-    }
-    if (command.includes('ぶんかつ') || command.includes('分割')) {
-        console.log("-> 音声入力: 分割 (M) を待機中...");
-        voiceState = 'awaiting_division';
-        if (voiceFeedback) voiceFeedback.textContent = '分割(M)の数値をどうぞ (3秒以内)';
-        startVoiceStateTimer(); 
-        return;
-    }
 
-    const normalizedCommand = normalizeNumber(command);
-
-    // (BPM数値コマンド)
-    const match = normalizedCommand.match(/(\d+)/);
-    if (match) {
-        const number = parseInt(match[1], 10);
-        if (number >= 40 && number <= 240) {
-            console.log(`BPMを ${number} に設定します`);
-            bpmSlider.value = number;
-            updateBPM();
-            if (voiceFeedback) voiceFeedback.textContent = `BPM ${number} に設定`;
-        } else {
-            console.log(`BPM値 ${number} は無効です (40-240)`);
-            if (voiceFeedback) voiceFeedback.textContent = `無効なBPMです (40-240)`;
-        }
-    }
-}
-
-/**
- * 状態: 拍子(N) の数値待ちの処理
- */
-function handleBeatState(command) {
-    const normalizedCommand = normalizeNumber(command);
-    let success = false; 
-    const match = normalizedCommand.match(/(\d+)/); 
-    if (match) {
-        const number = parseInt(match[1], 10);
+    // パターンB: N拍子 (例: "4拍子", "四拍子")
+    // 正規表現: 数字 + (拍子|ひょうし|表紙)
+    const beatMatch = normalizedCommand.match(/(\d+)\s*(?:拍子|ひょうし|表紙)/);
+    if (beatMatch) {
+        const number = parseInt(beatMatch[1], 10);
         if (number >= 1 && number <= 9) {
             console.log(`拍子 (N) を ${number} に設定します`);
             modeBeat.checked = true;
@@ -317,34 +291,18 @@ function handleBeatState(command) {
             beatsSelect.value = number;
             beatsSelect.dispatchEvent(new Event('change'));
             if (voiceFeedback) voiceFeedback.textContent = `拍子(N) を ${number} に設定`;
-            success = true;
         } else {
             console.log(`拍子(N)の値 ${number} は無効です (1-9)`);
-            if (voiceFeedback) voiceFeedback.textContent = `無効な拍子です (1-9)`;
+            if (voiceFeedback) voiceFeedback.textContent = `無効な拍子です: ${number}`;
         }
-    } else {
-        console.log("拍子(N)の数値 (1-9) が認識できませんでした。");
-        if (voiceFeedback) voiceFeedback.textContent = '数値が認識できませんでした';
+        return; // 拍子として処理したら終了
     }
-    
-    resetVoiceState(); 
 
-    if (success && voiceFeedback) {
-        setTimeout(() => {
-             if (voiceState === 'bpm') voiceFeedback.textContent = 'BPMの数値をどうぞ';
-        }, 1500); 
-    }
-}
-
-/**
- * 状態: 分割(M) の数値待ちの処理
- */
-function handleDivisionState(command) {
-    const normalizedCommand = normalizeNumber(command);
-    let success = false;
-    const match = normalizedCommand.match(/(\d+)/);
-    if (match) {
-        const number = parseInt(match[1], 10);
+    // パターンC: M分割 (例: "3分割", "三分割")
+    // 正規表現: 数字 + (分割|ぶんかつ)
+    const divMatch = normalizedCommand.match(/(\d+)\s*(?:分割|ぶんかつ)/);
+    if (divMatch) {
+        const number = parseInt(divMatch[1], 10);
         if (number >= 1 && number <= 6) {
             console.log(`分割 (M) を ${number} に設定します`);
             modeDivision.checked = true;
@@ -352,87 +310,34 @@ function handleDivisionState(command) {
             divisionsSelect.value = number;
             divisionsSelect.dispatchEvent(new Event('change'));
             if (voiceFeedback) voiceFeedback.textContent = `分割(M) を ${number} に設定`;
-            success = true;
         } else {
             console.log(`分割(M)の値 ${number} は無効です (1-6)`);
-            if (voiceFeedback) voiceFeedback.textContent = `無効な分割です (1-6)`;
+            if (voiceFeedback) voiceFeedback.textContent = `無効な分割です: ${number}`;
         }
-    } else {
-        console.log("分割(M)の数値 (1-6) が認識できませんでした。");
-        if (voiceFeedback) voiceFeedback.textContent = '数値が認識できませんでした';
+        return; // 分割として処理したら終了
     }
 
-    resetVoiceState(); 
-
-    if (success && voiceFeedback) {
-        setTimeout(() => {
-            if (voiceState === 'bpm') voiceFeedback.textContent = 'BPMの数値をどうぞ';
-        }, 1500); 
-    }
-}
-
-
-/**
- * メインの音声コマンド処理（状態に応じて振り分ける）
- * ▼▼▼ ここを修正 ▼▼▼
- */
-function handleVoiceCommand(command) {
-    // --- 優先コマンド (状態に関わらず実行) ---
-
-    // (メトロノーム開始)
-    if (command.includes('スタート') && !isRunning) {
-        startStop();
-        if (voiceFeedback) voiceFeedback.textContent = 'メトロノームを開始';
-        return;
-    }
-    // (メトロノーム停止)
-    if ((command.includes('ストップ') || command.includes('とめて')) && isRunning) {
-        startStop();
-        if (voiceFeedback) voiceFeedback.textContent = 'メトロノームを停止';
+    // パターンD: BPM (数値のみ)
+    // 上記のパターンB, Cにマッチせず、数字だけが含まれている場合
+    const bpmMatch = normalizedCommand.match(/(\d+)/);
+    if (bpmMatch) {
+        const number = parseInt(bpmMatch[1], 10);
+        if (number >= 40 && number <= 240) {
+            console.log(`BPMを ${number} に設定します`);
+            bpmSlider.value = number;
+            updateBPM();
+            if (voiceFeedback) voiceFeedback.textContent = `BPM ${number} に設定`;
+        } else {
+            console.log(`BPM値 ${number} は無効です (40-240)`);
+            if (voiceFeedback) voiceFeedback.textContent = `無効なBPMです: ${number}`;
+        }
         return;
     }
 
-    // ★★★ 【新機能】音声コントロール自体を停止 ★★★
-    // 「音声停止」「コントロール停止」「マイクオフ」などで音声認識をオフにする
-    if ((command.includes('音声停止') || command.includes('コントロール停止') || command.includes('マイクオフ')) && isVoiceControlActive) {
-        console.log("-> 音声コントロールを停止します");
-        
-        recognition.stop(); // 認識を停止
-        isVoiceControlActive = false; // アクティブフラグを倒す
-        
-        // ボタンの見た目を元に戻す
-        voiceBtn.textContent = '音声コントロール 🎙️';
-        voiceBtn.classList.remove('running');
-        
-        // 状態をリセットし、フィードバックを更新
-        resetVoiceState(); 
-        if (voiceFeedback) voiceFeedback.textContent = '音声コントロールを停止しました';
-
-        // 少し待ってからフィードバックを完全に消す
-        setTimeout(() => {
-            // 停止したままなら（＝ユーザーがボタンを押して再開してないなら）
-            if (voiceFeedback && !isVoiceControlActive) {
-                voiceFeedback.textContent = ''; // フィードバックをクリア
-            }
-        }, 2000); // 2秒後に消す
-        
-        return; // これ以上処理しない
-    }
-    // ★★★ ここまで追加 ★II
-
-
-    // --- 状態依存コマンド (BPM, 拍子, 分割) ---
-    switch (voiceState) {
-        case 'bpm':
-            handleBpmState(command);
-            break;
-        case 'awaiting_beat':
-            handleBeatState(command);
-            break;
-        case 'awaiting_division':
-            handleDivisionState(command);
-            break;
-    }
+    // どのパターンにも当てはまらない場合
+    console.log("認識しましたが、コマンドとして解釈できませんでした:", command);
+    // (必要であればフィードバック欄に「不明なコマンド」と出しても良いですが、
+    //  雑音を拾った場合うるさいので、ここでは何もしません)
 }
 
 
@@ -451,8 +356,6 @@ if (SpeechRecognition) {
     };
 
     recognition.onend = () => {
-        // isVoiceControlActive が true の場合のみ再開
-        // (音声停止コマンドで false になっていれば、再開しない)
         if (isVoiceControlActive) {
             try {
                 recognition.start();
@@ -473,7 +376,6 @@ if (SpeechRecognition) {
             isVoiceControlActive = false;
             voiceBtn.textContent = '音声コントロール 🎙️';
             voiceBtn.classList.remove('running');
-            resetVoiceState(); 
             if (voiceFeedback) voiceFeedback.textContent = ''; 
         } else {
             // --- 開始 ---
@@ -482,7 +384,8 @@ if (SpeechRecognition) {
                 isVoiceControlActive = true;
                 voiceBtn.textContent = '音声停止 🛑';
                 voiceBtn.classList.add('running');
-                resetVoiceState(); // 開始時にリセット＆フィードバック表示
+                // 開始時は案内を表示
+                if (voiceFeedback) voiceFeedback.textContent = '例:「120」「4拍子」「3分割」';
             } catch (error) {
                 console.error('音声認識の開始に失敗:', error);
                 alert('音声認識の開始に失敗しました。');
@@ -497,4 +400,3 @@ if (SpeechRecognition) {
     voiceBtn.disabled = true;
     if (voiceFeedback) voiceFeedback.textContent = 'このブラウザは音声操作非対応です';
 }
-
