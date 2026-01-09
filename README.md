@@ -1,4 +1,4 @@
-# web_metronome
+# web-metronome
 Webメトロノーム web app
 
 機能概要
